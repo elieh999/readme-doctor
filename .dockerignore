@@ -1,0 +1,23 @@
+# The image only needs the package source and its metadata. Without this file the build context
+# includes virtual environments, the packaged desktop executable, and build output, which makes the
+# build slow and the layers large.
+.git
+.github
+.venv
+.package-test
+venv
+Application
+work
+dist
+build
+*.egg-info
+__pycache__
+*.py[cod]
+.coverage
+htmlcov
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.sarif
+docs/assets
+README Doctor Error.log
