@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: elieh999/readme-doctor@v1
+      - uses: elieh999/readme-doctor@v0.1.0
         with:
           format: text
           strict: "true"
@@ -63,7 +63,7 @@ Counts always describe the same scan whose exit code the step reported, includin
 enabled.
 
 ```yaml
-      - uses: elieh999/readme-doctor@v1
+      - uses: elieh999/readme-doctor@v0.1.0
         id: readme
       - if: steps.readme.outputs.result == 'fail'
         run: echo "${{ steps.readme.outputs.errors }} errors found"
@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: elieh999/readme-doctor@v1
+      - uses: elieh999/readme-doctor@v0.1.0
         with:
           format: sarif
           output-path: readme-doctor.sarif
@@ -124,5 +124,8 @@ failing, and strict cases.
 
 ## Versioning
 
-Consumers should pin a tag. Publish `v0.1.0` and move a floating `v1` tag to it when the interface is
-stable enough to promise compatibility.
+Pin an exact tag. `v0.1.0` is the only tag published so far.
+
+There is deliberately no floating `v1` tag yet. Pointing at `v1` would promise that the input and
+output names will not change, and this is a first release. A `v1` tag will be published, and moved
+across patch releases, once the interface has settled.

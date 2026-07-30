@@ -225,7 +225,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: elieh999/readme-doctor@v1
+      - uses: elieh999/readme-doctor@v0.1.0
         with:
           format: text
           strict: "true"
