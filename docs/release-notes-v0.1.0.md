@@ -79,17 +79,24 @@ Details are in `docs/security-model.md`.
 
 ## Verified for this release
 
-- 232 tests pass and 2 skip on Windows, where unprivileged symlink creation is unavailable
-- Branch coverage 87 percent against an 80 percent gate
+Every item below was run, not assumed. CI results are from the run on the release commit.
+
+- 354 tests pass on Linux with no skips. On Windows 352 pass and 2 skip, because unprivileged
+  symlink creation is unavailable there
+- Branch coverage 90.7 percent against an 80 percent gate
+- Tested on Python 3.11, 3.12, and 3.13 on Linux, and on Python 3.12 on Windows
 - `ruff format --check`, `ruff check`, and `mypy --strict` clean
 - `twine check --strict` passes for the wheel and the source distribution
 - `pip-audit --strict` reports no known vulnerabilities in the dependency tree
-- The wheel installs into a clean environment and the command line, JSON, SARIF, and rules output all
-  work from it
+- The wheel installs into a clean environment, and the command line, JSON, SARIF, and rules output
+  all work from it
+- The Docker image builds and scans a fixture successfully
+- GitHub code scanning accepted the SARIF output, so the format is confirmed valid in practice
+- The action runs against this repository on every push and passes
 
-The Docker image build and real Docker command execution were not exercised on the machine used for
-this release, because Docker was not installed there. Both are covered by CI. The Docker unavailable
-path was verified directly and reports RD020.
+Real Docker command execution, meaning `--execute` actually running a container, was not exercised.
+The Docker unavailable path was verified directly and reports RD020 without falling back to the
+host. The container arguments are asserted by tests rather than by a live run.
 
 ## Known limitations
 
