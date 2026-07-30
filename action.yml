@@ -1,6 +1,6 @@
 name: README Doctor
 description: Check whether README instructions still match the repository
-author: README Doctor contributors
+author: Elie El Helou
 branding:
   icon: book-open
   color: blue

@@ -9,7 +9,7 @@ description = "Check whether repository README instructions still match the proj
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
-authors = [{ name = "README Doctor contributors" }]
+authors = [{ name = "Elie El Helou" }]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
