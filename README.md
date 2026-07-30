@@ -224,7 +224,7 @@ jobs:
   readme:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: elieh999/readme-doctor@v1
         with:
           format: text
