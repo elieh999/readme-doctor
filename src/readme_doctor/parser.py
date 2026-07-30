@@ -50,6 +50,26 @@ class MarkdownDocument:
             return False
         return rule_id in self.suppressions.get(line, set())
 
+    def fenced_lines(self) -> set[int]:
+        """Line numbers covered by a fenced code block, including its fence lines."""
+        covered: set[int] = set()
+        for block in self.code_blocks:
+            covered.update(range(block.line, block.line + block.content.count("\n") + 2))
+        return covered
+
+    def prose_text(self) -> str:
+        """The document with fenced code blocks blanked out, keeping every line number intact.
+
+        Rules that read requirements out of prose use this. Sample output and example commands
+        inside a fenced block describe what a reader will see, not what the project requires, so
+        matching them would report the documentation's own examples as conflicts.
+        """
+        covered = self.fenced_lines()
+        return "\n".join(
+            "" if number in covered else line
+            for number, line in enumerate(self.text.splitlines(), start=1)
+        )
+
 
 def github_slug(text: str) -> str:
     normalized = unicodedata.normalize("NFKC", text).strip().lower()

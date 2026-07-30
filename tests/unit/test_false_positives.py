@@ -164,6 +164,56 @@ def test_a_newer_documented_version_is_not_a_mismatch(tmp_path: Path) -> None:
     assert "RD009" not in ids(tmp_path)
 
 
+def test_a_version_inside_a_code_block_is_not_a_requirement(tmp_path: Path) -> None:
+    """Sample output and example commands must not be read as version claims."""
+    write(
+        tmp_path, "pyproject.toml", "[project]\nname='d'\nversion='1'\nrequires-python='>=3.12'\n"
+    )
+    write(
+        tmp_path,
+        "README.md",
+        "# Demo\n\nExample output:\n\n```text\nREADME allows Python 3.9, but the project "
+        "requires 3.12.\n```\n\n```bash\npyenv install Python 3.8\n```\n" + SECTIONS,
+    )
+    assert "RD009" not in ids(tmp_path)
+
+
+def test_a_version_in_prose_is_still_a_requirement(tmp_path: Path) -> None:
+    write(
+        tmp_path, "pyproject.toml", "[project]\nname='d'\nversion='1'\nrequires-python='>=3.12'\n"
+    )
+    write(
+        tmp_path,
+        "README.md",
+        "# Demo\n\nRequires Python 3.9 or newer.\n\n```text\nsample output\n```\n" + SECTIONS,
+    )
+    assert "RD009" in ids(tmp_path)
+
+
+def test_a_node_version_inside_a_code_block_is_not_a_requirement(tmp_path: Path) -> None:
+    write(tmp_path, "package.json", json.dumps({"engines": {"node": ">=22"}}))
+    write(
+        tmp_path,
+        "README.md",
+        "# Demo\n\n```bash\nnvm install Node 16\n```\n" + SECTIONS,
+    )
+    assert "RD010" not in ids(tmp_path)
+
+
+def test_prose_text_keeps_line_numbers_stable(tmp_path: Path) -> None:
+    write(
+        tmp_path, "pyproject.toml", "[project]\nname='d'\nversion='1'\nrequires-python='>=3.12'\n"
+    )
+    write(
+        tmp_path,
+        "README.md",
+        "# Demo\n\n```text\nline one\nline two\nline three\n```\n\nRequires Python 3.9.\n"
+        + SECTIONS,
+    )
+    findings = [item for item in scan_repository(tmp_path).findings if item.rule_id == "RD009"]
+    assert [item.line for item in findings] == [9]
+
+
 def test_placeholder_words_inside_identifiers_are_ignored(tmp_path: Path) -> None:
     write(
         tmp_path,

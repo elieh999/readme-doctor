@@ -13,8 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # `uses: ./` runs the action from this checkout, which is how the composite action is
+      # exercised before a release is tagged.
       - uses: ./
         with:
+          config: readme-doctor.yml
           format: sarif
           strict: "true"
           output-path: readme-doctor.sarif

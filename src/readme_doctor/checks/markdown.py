@@ -208,9 +208,7 @@ def check_sections_and_placeholders(context: CheckContext) -> list[Finding]:
                 if finding:
                     findings.append(finding)
     ignored = {phrase.casefold() for phrase in context.config.rules.ignored_placeholders}
-    fenced_lines: set[int] = set()
-    for block in context.document.code_blocks:
-        fenced_lines.update(range(block.line, block.line + block.content.count("\n") + 2))
+    fenced_lines = context.document.fenced_lines()
     for line_number, line in enumerate(context.document.text.splitlines(), start=1):
         if line_number in fenced_lines:
             continue

@@ -1,0 +1,35 @@
+# README Doctor checking its own README.
+#
+# Used by .github/workflows/readme-doctor.yml. Also a worked example of the two settings most
+# projects end up needing.
+version: 1
+
+readme:
+  paths:
+    - README.md
+
+rules:
+  # This README uses its own section names. RD014 compares against whatever you list here rather
+  # than insisting on one vocabulary.
+  required_sections:
+    enabled: true
+    severity: notice
+    sections:
+      - Installation
+      - Quick start
+      - Exit codes
+      - Security model
+      - Tests
+      - License
+
+  # The rules table names the phrases RD015 looks for, so it necessarily contains them. This is the
+  # normal escape hatch for documentation that describes a linter.
+  ignored_placeholders:
+    - todo
+    - tbd
+    - lorem ipsum
+    - coming soon
+
+execution:
+  enabled: false
+  verify_commands: []

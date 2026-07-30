@@ -219,7 +219,9 @@ def _dart_first_lines(text: str) -> dict[tuple[str, str], int]:
 
 def check_versions(context: CheckContext) -> list[Finding]:
     findings: list[Finding] = []
-    text = context.document.text
+    # Requirements are read from prose only. A version inside a fenced block is part of an example
+    # command or of sample output, not a statement about what the project needs.
+    text = context.document.prose_text()
     root = context.repository.root
 
     def add(rule_id: str, explanation: str, line: int, evidence: str) -> None:
