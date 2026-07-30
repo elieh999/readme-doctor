@@ -314,6 +314,57 @@ def test_a_project_variable_is_still_reported_alongside_platform_variables(tmp_p
     assert [item.evidence for item in findings] == ["variable=STRIPE_API_KEY; source=code"]
 
 
+def test_a_local_badge_image_is_not_an_invalid_url(tmp_path: Path) -> None:
+    """A badge committed to the repository is a relative path. RD002 owns its existence."""
+    (tmp_path / "images").mkdir()
+    write(tmp_path / "images", "build-badge.svg", "<svg/>")
+    write(tmp_path, "README.md", "# Demo\n\n![build](images/build-badge.svg)\n" + SECTIONS)
+    assert "RD016" not in ids(tmp_path)
+
+
+def test_a_missing_local_badge_is_reported_once(tmp_path: Path) -> None:
+    write(tmp_path, "README.md", "# Demo\n\n![build](images/build-badge.svg)\n" + SECTIONS)
+    found = ids(tmp_path)
+    assert found.count("RD002") == 1
+    assert "RD016" not in found
+
+
+def test_a_malformed_absolute_badge_url_is_still_reported(tmp_path: Path) -> None:
+    write(tmp_path, "README.md", "# Demo\n\n![build](htp://shields.io/badge/a-b)\n" + SECTIONS)
+    assert "RD016" in ids(tmp_path)
+
+
+def test_a_valid_shields_badge_produces_nothing(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "README.md",
+        "# Demo\n\n![build](https://img.shields.io/badge/build-passing-green)\n" + SECTIONS,
+    )
+    assert "RD016" not in ids(tmp_path)
+
+
+def test_indented_code_blocks_are_excluded_from_prose_rules(tmp_path: Path) -> None:
+    write(
+        tmp_path, "pyproject.toml", "[project]\nname='d'\nversion='1'\nrequires-python='>=3.12'\n"
+    )
+    write(
+        tmp_path,
+        "README.md",
+        "# Demo\n\nExample:\n\n    # TODO placeholder inside indented code\n"
+        "    install Python 3.8 first\n\nReal prose follows.\n" + SECTIONS,
+    )
+    found = ids(tmp_path)
+    assert "RD015" not in found
+    assert "RD009" not in found
+
+
+def test_an_indented_block_is_not_reported_as_a_fence_problem(tmp_path: Path) -> None:
+    write(tmp_path, "README.md", "# Demo\n\nExample:\n\n    plain indented text\n" + SECTIONS)
+    found = ids(tmp_path)
+    assert "RD005" not in found
+    assert "RD006" not in found
+
+
 def test_remote_links_are_not_treated_as_local_paths(tmp_path: Path) -> None:
     write(
         tmp_path,

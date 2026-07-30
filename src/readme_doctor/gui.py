@@ -35,6 +35,20 @@ def _crash_log_path() -> Path:
     return Path.cwd() / "README Doctor Error.log"
 
 
+def _write_crash_log(details: str) -> Path | None:
+    """Save crash details next to the application, returning the path when that succeeded.
+
+    The executable can sit in a directory the user cannot write to, so a failure here must not
+    replace the original error with a second one.
+    """
+    try:
+        path = _crash_log_path()
+        path.write_text(details, encoding="utf-8")
+    except OSError:
+        return None
+    return path
+
+
 class DoctorDesktop:
     def __init__(self, root: Tk) -> None:
         self.root = root
@@ -260,13 +274,13 @@ class DoctorDesktop:
         except (ConfigError, OSError, ValueError) as exc:
             self.root.after(0, self._scan_failed, str(exc))
         except Exception:
-            details = traceback.format_exc()
-            _crash_log_path().write_text(details, encoding="utf-8")
-            self.root.after(
-                0,
-                self._scan_failed,
-                f"An unexpected error occurred. Details were saved to {_crash_log_path()}.",
+            saved = _write_crash_log(traceback.format_exc())
+            message = (
+                f"An unexpected error occurred. Details were saved to {saved}."
+                if saved is not None
+                else "An unexpected error occurred, and the details could not be written to a log."
             )
+            self.root.after(0, self._scan_failed, message)
 
     def _scan_complete(self, report: Report) -> None:
         self.current_report = report
@@ -326,7 +340,15 @@ class DoctorDesktop:
         selection = self.tree.selection()
         if not selection:
             return
-        finding: Finding = self.current_report.findings[int(selection[0])]
+        # Deleting rows changes the selection, so this handler can run with an index from a
+        # previous, longer report. The index is validated rather than trusted.
+        try:
+            index = int(selection[0])
+        except ValueError:
+            return
+        if not 0 <= index < len(self.current_report.findings):
+            return
+        finding: Finding = self.current_report.findings[index]
         self.detail.set(
             f"{finding.title}\nEvidence: {finding.evidence}\n"
             f"Suggestion: {finding.suggestion}\nConfidence: {finding.confidence.value}"
@@ -349,14 +371,26 @@ class DoctorDesktop:
         )
         if not destination:
             return
-        Path(destination).write_text(renderer(self.current_report), encoding="utf-8")
+        try:
+            Path(destination).write_text(renderer(self.current_report), encoding="utf-8")
+        except OSError as exc:
+            # A read only location or a path the user cannot write to must not close the window.
+            messagebox.showerror(APP_NAME, f"Could not save the report: {exc}")
+            self.status.set(f"Could not save {title}.")
+            return
         self.status.set(f"Saved {title} to {destination}")
 
 
 def main() -> None:
-    root = Tk()
-    DoctorDesktop(root)
-    root.mainloop()
+    try:
+        root = Tk()
+        DoctorDesktop(root)
+        root.mainloop()
+    except Exception:
+        # A failure before or outside the event loop would otherwise disappear, because the
+        # packaged application is built without a console.
+        _write_crash_log(traceback.format_exc())
+        raise
 
 
 if __name__ == "__main__":

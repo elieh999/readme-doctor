@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -171,3 +173,22 @@ def test_a_file_given_instead_of_a_directory_reports_a_tool_error(tmp_path: Path
     target.write_text("# Demo\n", encoding="utf-8")
     result = runner.invoke(app, ["check", str(target)])
     assert result.exit_code == 2
+
+
+def test_an_interrupted_scan_exits_with_the_signal_convention(tmp_path: Path) -> None:
+    """An interrupted run must not look like a pass, or a cancelled CI job would appear green."""
+    (tmp_path / "README.md").write_text("# Demo\n", encoding="utf-8")
+    program = (
+        "import readme_doctor.cli as cli\n"
+        "def interrupted(*a, **k):\n"
+        "    raise KeyboardInterrupt\n"
+        "cli.scan_repository = interrupted\n"
+        "cli.app()\n"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", program, "check", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 130

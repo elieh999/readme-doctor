@@ -31,6 +31,9 @@ class CodeBlock:
     language: str
     content: str
     line: int
+    # Indented code blocks carry no language and no fence, so the rules about fence syntax do not
+    # apply to them. They are still recorded so their lines can be excluded from prose checks.
+    fenced: bool = True
 
 
 @dataclass
@@ -50,11 +53,16 @@ class MarkdownDocument:
             return False
         return rule_id in self.suppressions.get(line, set())
 
-    def fenced_lines(self) -> set[int]:
-        """Line numbers covered by a fenced code block, including its fence lines."""
+    def code_lines(self) -> set[int]:
+        """Line numbers covered by any code block, fenced or indented.
+
+        A fenced block's range includes both fence lines. Prose rules use this so an example
+        inside a code block is not read as a statement about the project.
+        """
         covered: set[int] = set()
         for block in self.code_blocks:
-            covered.update(range(block.line, block.line + block.content.count("\n") + 2))
+            span = block.content.count("\n") + (2 if block.fenced else 0)
+            covered.update(range(block.line, block.line + span))
         return covered
 
     def prose_text(self) -> str:
@@ -64,7 +72,7 @@ class MarkdownDocument:
         inside a fenced block describe what a reader will see, not what the project requires, so
         matching them would report the documentation's own examples as conflicts.
         """
-        covered = self.fenced_lines()
+        covered = self.code_lines()
         return "\n".join(
             "" if number in covered else line
             for number, line in enumerate(self.text.splitlines(), start=1)
@@ -171,6 +179,8 @@ def parse_markdown(path: Path, known_rules: set[str]) -> MarkdownDocument:
         elif token.type == "fence":
             language = token.info.strip().split(maxsplit=1)[0] if token.info.strip() else ""
             document.code_blocks.append(CodeBlock(language, token.content, line))
+        elif token.type == "code_block":
+            document.code_blocks.append(CodeBlock("", token.content, line, fenced=False))
         elif token.type == "html_block":
             document.explicit_anchors.update(
                 match.group(1)

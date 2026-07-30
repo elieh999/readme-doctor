@@ -161,6 +161,9 @@ def check_code_blocks(context: CheckContext) -> list[Finding]:
     findings: list[Finding] = []
     known = KNOWN_LANGUAGES | set(context.config.rules.known_code_languages)
     for block in context.document.code_blocks:
+        if not block.fenced:
+            # An indented block has no fence and no language, so neither rule applies to it.
+            continue
         if not block.content.strip():
             finding = context.finding(
                 "RD005",
@@ -208,9 +211,9 @@ def check_sections_and_placeholders(context: CheckContext) -> list[Finding]:
                 if finding:
                     findings.append(finding)
     ignored = {phrase.casefold() for phrase in context.config.rules.ignored_placeholders}
-    fenced_lines = context.document.fenced_lines()
+    code_lines = context.document.code_lines()
     for line_number, line in enumerate(context.document.text.splitlines(), start=1):
-        if line_number in fenced_lines:
+        if line_number in code_lines:
             continue
         plain = _prose(line)
         for phrase in PLACEHOLDERS:
@@ -231,20 +234,33 @@ def check_sections_and_placeholders(context: CheckContext) -> list[Finding]:
 
 
 def check_badges(context: CheckContext) -> list[Finding]:
+    """Report badge images whose URL is malformed.
+
+    Only destinations that are meant to be absolute are inspected. A badge stored in the
+    repository is a relative path, which is perfectly valid, and its existence is already RD002's
+    responsibility. Checking it here would report one problem under two rules.
+    """
     findings: list[Finding] = []
     for link in context.document.links:
         if not link.is_image:
             continue
-        lower = link.destination.casefold()
+        destination = link.destination.strip()
+        lower = destination.casefold()
         if "badge" not in lower and "shields.io" not in lower:
             continue
-        parsed = urlsplit(link.destination)
+        parsed = urlsplit(destination)
+        # A relative path has no scheme and no leading `//`. Leave those to RD002.
+        if not parsed.scheme and not destination.startswith("//"):
+            continue
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             finding = context.finding(
                 "RD016",
-                f"Badge image URL is invalid: {link.destination}",
+                f"Badge image URL is not a valid absolute URL: {destination}",
                 line=link.line,
-                evidence=link.destination,
+                evidence=destination,
+                suggestion=(
+                    "Use a complete https URL, or a relative path to a badge in the repository."
+                ),
             )
             if finding:
                 findings.append(finding)
