@@ -1,0 +1,16 @@
+.venv/
+.package-test/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+*.sarif
+Application/
+work/
+README Doctor Error.log

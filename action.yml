@@ -1,0 +1,77 @@
+name: README Doctor
+description: Check whether README instructions still match the repository
+author: README Doctor contributors
+branding:
+  icon: book-open
+  color: blue
+inputs:
+  path:
+    description: Repository path to scan
+    required: false
+    default: .
+  config:
+    description: Optional configuration path
+    required: false
+    default: ""
+  format:
+    description: "Report format: text, json, or sarif"
+    required: false
+    default: sarif
+  strict:
+    description: Fail on any finding
+    required: false
+    default: "false"
+  network:
+    description: Enable remote link checks
+    required: false
+    default: "false"
+  execute:
+    description: Enable configured Docker command checks
+    required: false
+    default: "false"
+  fail-severity:
+    description: Lowest failing severity
+    required: false
+    default: error
+  output-path:
+    description: Report file path
+    required: false
+    default: readme-doctor.sarif
+outputs:
+  errors:
+    description: Error finding count
+    value: ${{ steps.scan.outputs.errors }}
+  warnings:
+    description: Warning finding count
+    value: ${{ steps.scan.outputs.warnings }}
+  notices:
+    description: Notice finding count
+    value: ${{ steps.scan.outputs.notices }}
+  result:
+    description: pass or fail
+    value: ${{ steps.scan.outputs.result }}
+  report-path:
+    description: Generated report path
+    value: ${{ steps.scan.outputs.report-path }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install README Doctor
+      shell: bash
+      run: python -m pip install "${{ github.action_path }}"
+    - name: Run README Doctor
+      id: scan
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_STRICT: ${{ inputs.strict }}
+        INPUT_NETWORK: ${{ inputs.network }}
+        INPUT_EXECUTE: ${{ inputs.execute }}
+        INPUT_FAIL_SEVERITY: ${{ inputs.fail-severity }}
+        INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
+      run: python "${{ github.action_path }}/scripts/run_action.py"

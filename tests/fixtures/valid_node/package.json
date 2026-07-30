@@ -1,0 +1,1 @@
+{"name":"valid-node","version":"1.0.0","engines":{"node":">=20"},"scripts":{"start":"node index.js","test":"node --test"}}

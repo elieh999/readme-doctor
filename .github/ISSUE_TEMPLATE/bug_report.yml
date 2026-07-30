@@ -1,0 +1,25 @@
+name: Bug report
+description: Report an incorrect result or tool failure
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: README Doctor version
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Remove secrets before pasting configuration or output.
+    validations:
+      required: true

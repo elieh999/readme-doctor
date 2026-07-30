@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest a focused improvement
+title: "feature: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Documentation problem
+      description: What repository documentation problem should the tool detect or handle?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Reliable evidence
+      description: Which project files provide strong evidence without excessive false positives?
+    validations:
+      required: true
