@@ -30,6 +30,12 @@ jobs:
         run: mypy src
       - name: Tests with coverage
         run: pytest --cov=readme_doctor --cov-report=term-missing
+      - name: Confirm the screenshot matches the current output
+        # Regenerating must produce no change. A stale screenshot is exactly the drift this
+        # project exists to catch.
+        run: |
+          python scripts/capture_demo.py
+          git diff --exit-code -- docs/screenshots/
 
   windows:
     name: Tests on Windows

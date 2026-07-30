@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -181,13 +180,5 @@ def list_rules() -> None:
     )
 
 
-def main() -> int:
-    try:
-        app()
-    except SystemExit as exc:
-        return int(exc.code or 0)
-    return 0
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    app()
