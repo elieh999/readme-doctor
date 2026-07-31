@@ -138,4 +138,3 @@ def check_remote_links(context: CheckContext) -> list[Finding]:
             if finding:
                 findings.append(finding)
     return findings
-
