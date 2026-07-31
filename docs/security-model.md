@@ -109,4 +109,3 @@ only control over secrets in a repository.
 
 See [SECURITY.md](../SECURITY.md). Please do not open a public issue for anything involving command
 execution or secret exposure.
-
