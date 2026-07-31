@@ -37,7 +37,8 @@ Remote link checking is off unless `--network` or `rules.remote_links.enabled` t
 When enabled it applies a per request timeout, a redirect limit, a transport retry limit, and an
 identifying user agent. Each URL is requested at most once per run and the result is reused for every
 location that references it. Configured domains are skipped, including their subdomains. Credentials
-embedded in a URL are stripped before the URL appears in any report.
+embedded in a URL are stripped before the request and before the URL appears in any report. Loopback,
+link local, and private network destinations are blocked on both initial requests and redirects.
 
 Rate limit and server error responses are treated as transient and produce no finding, so a result
 does not depend on a site having a bad minute. Certificate verification failures are reported with a
@@ -108,3 +109,4 @@ only control over secrets in a repository.
 
 See [SECURITY.md](../SECURITY.md). Please do not open a public issue for anything involving command
 execution or secret exposure.
+
