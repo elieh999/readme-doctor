@@ -193,4 +193,3 @@ def test_execution_success_and_timeout(repository: Path, monkeypatch: Any) -> No
     report = scan_repository(repository, config)
     assert [item.rule_id for item in report.findings] == ["RD018"]
     assert "timed out" in report.findings[0].explanation
-
