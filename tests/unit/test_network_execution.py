@@ -84,6 +84,25 @@ def test_credentials_in_a_remote_url_are_not_reported(repository: Path, monkeypa
     config = DoctorConfig.model_validate({"rules": {"remote_links": {"enabled": True}}})
     report = scan_repository(repository, config)
     assert "hunter2" not in report.model_dump_json()
+    assert FakeClient.calls == ["https://example.test/missing"]
+
+
+def test_private_network_links_are_blocked_without_a_request(
+    repository: Path, monkeypatch: Any
+) -> None:
+    (repository / "README.md").write_text(
+        "# Demo\n[private](http://127.0.0.1/admin)\n"
+        "## Installation\n## Usage\n## Testing\n## License\n",
+        encoding="utf-8",
+    )
+    FakeClient.calls = []
+    monkeypatch.setattr("readme_doctor.network.httpx.Client", FakeClient)
+    config = DoctorConfig.model_validate({"rules": {"remote_links": {"enabled": True}}})
+    report = scan_repository(repository, config)
+    remote = [item for item in report.findings if item.rule_id == "RD017"]
+    assert len(remote) == 1
+    assert remote[0].evidence == "status=private network destination blocked"
+    assert FakeClient.calls == []
 
 
 def test_remote_links_are_not_requested_when_disabled(repository: Path, monkeypatch: Any) -> None:
@@ -158,3 +177,4 @@ def test_execution_success_and_timeout(repository: Path, monkeypatch: Any) -> No
     report = scan_repository(repository, config)
     assert [item.rule_id for item in report.findings] == ["RD018"]
     assert "timed out" in report.findings[0].explanation
+
