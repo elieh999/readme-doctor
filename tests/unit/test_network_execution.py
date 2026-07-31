@@ -5,8 +5,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, ClassVar
 
+import httpx
+import pytest
+
 from readme_doctor import DoctorConfig, scan_repository
 from readme_doctor.execution.runner import DANGEROUS
+from readme_doctor.network import UnsafeRemoteURL, _require_public_destination
 
 
 class FakeClient:
@@ -84,6 +88,37 @@ def test_credentials_in_a_remote_url_are_not_reported(repository: Path, monkeypa
     config = DoctorConfig.model_validate({"rules": {"remote_links": {"enabled": True}}})
     report = scan_repository(repository, config)
     assert "hunter2" not in report.model_dump_json()
+    assert FakeClient.calls == ["https://example.test/missing"]
+
+
+def test_private_network_links_are_blocked_without_a_request(
+    repository: Path, monkeypatch: Any
+) -> None:
+    (repository / "README.md").write_text(
+        "# Demo\n[private](http://127.0.0.1/admin)\n"
+        "## Installation\n## Usage\n## Testing\n## License\n",
+        encoding="utf-8",
+    )
+    FakeClient.calls = []
+    monkeypatch.setattr("readme_doctor.network.httpx.Client", FakeClient)
+    config = DoctorConfig.model_validate({"rules": {"remote_links": {"enabled": True}}})
+    report = scan_repository(repository, config)
+    remote = [item for item in report.findings if item.rule_id == "RD017"]
+    assert len(remote) == 1
+    assert remote[0].evidence == "status=private network destination blocked"
+    assert FakeClient.calls == []
+
+
+def test_request_hook_blocks_a_hostname_that_resolves_to_a_private_address(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "readme_doctor.network.socket.getaddrinfo",
+        lambda *_: [(None, None, None, None, ("10.0.0.4", 443))],
+    )
+
+    with pytest.raises(UnsafeRemoteURL, match="private network destination"):
+        _require_public_destination(httpx.Request("GET", "https://internal.example/"))
 
 
 def test_remote_links_are_not_requested_when_disabled(repository: Path, monkeypatch: Any) -> None:

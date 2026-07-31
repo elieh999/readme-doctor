@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ipaddress
+import socket
 import ssl
 from urllib.parse import urlsplit, urlunsplit
 
@@ -12,6 +14,10 @@ USER_AGENT = "README-Doctor/0.1 (+https://github.com/elieh999/readme-doctor)"
 # Statuses that mean the site declined to answer rather than that the link is broken. Reporting
 # them as broken links would make results depend on unrelated site behavior.
 TRANSIENT_STATUSES = {408, 425, 429, 999}
+
+
+class UnsafeRemoteURL(Exception):
+    pass
 
 
 def redact_url(url: str) -> str:
@@ -33,6 +39,33 @@ def _ignored(hostname: str | None, ignored_domains: list[str]) -> bool:
         if host == pattern or host.endswith(f".{pattern}"):
             return True
     return False
+
+
+def _obviously_private(hostname: str | None) -> bool:
+    if not hostname:
+        return True
+    host = hostname.casefold().rstrip(".")
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return not ipaddress.ip_address(host).is_global
+    except ValueError:
+        return False
+
+
+def _require_public_destination(request: httpx.Request) -> None:
+    hostname = request.url.host
+    if _obviously_private(hostname):
+        raise UnsafeRemoteURL("private network destination blocked")
+    try:
+        addresses = {
+            ipaddress.ip_address(item[4][0])
+            for item in socket.getaddrinfo(hostname, request.url.port)
+        }
+    except (OSError, ValueError) as exc:
+        raise httpx.ConnectError("hostname resolution failed", request=request) from exc
+    if not addresses or any(not address.is_global for address in addresses):
+        raise UnsafeRemoteURL("private network destination blocked")
 
 
 def _describe(error: Exception) -> str:
@@ -62,6 +95,7 @@ def check_remote_links(context: CheckContext) -> list[Finding]:
         headers={"User-Agent": USER_AGENT},
         limits=httpx.Limits(max_connections=4, max_keepalive_connections=2),
         transport=httpx.HTTPTransport(retries=settings.retries),
+        event_hooks={"request": [_require_public_destination]},
     ) as client:
         for link in context.document.links:
             url = link.destination
@@ -71,16 +105,24 @@ def check_remote_links(context: CheckContext) -> list[Finding]:
             if _ignored(parsed.hostname, settings.ignored_domains):
                 continue
             if url not in cache:
-                try:
-                    response = client.head(url)
-                    if response.status_code in {403, 405, 501}:
-                        # These mean the host refused the method rather than that the target is
-                        # missing, so confirm with GET. A 404 from HEAD is taken at face value to
-                        # avoid a second request for every broken link.
-                        response = client.get(url)
-                    cache[url] = (response.status_code, None)
-                except httpx.HTTPError as exc:
-                    cache[url] = (None, _describe(exc))
+                if _obviously_private(parsed.hostname):
+                    cache[url] = (None, "private network destination blocked")
+                else:
+                    try:
+                        # Never transmit credentials copied from README text. The sanitized URL is
+                        # also used for redirects, where the request hook validates every target.
+                        request_url = redact_url(url)
+                        response = client.head(request_url)
+                        if response.status_code in {403, 405, 501}:
+                            # These mean the host refused the method rather than that the target is
+                            # missing, so confirm with GET. A 404 from HEAD is taken at face value
+                            # to avoid a second request for every broken link.
+                            response = client.get(request_url)
+                        cache[url] = (response.status_code, None)
+                    except UnsafeRemoteURL as exc:
+                        cache[url] = (None, str(exc))
+                    except httpx.HTTPError as exc:
+                        cache[url] = (None, _describe(exc))
             status, error = cache[url]
             if status in TRANSIENT_STATUSES or (status is not None and 500 <= status < 600):
                 continue
